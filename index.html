@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>당신의 전생 직업은?</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background: #fffaf0;
+      padding: 2rem;
+      color: #333;
+      margin: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: #ffffff;
+      padding: 2rem;
+      border-radius: 1.5rem;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.8rem;
+      margin-bottom: 1rem;
+    }
+    .question {
+      margin-bottom: 2rem;
+    }
+    .answers label {
+      display: block;
+      margin: 0.5rem 0;
+      font-size: 1rem;
+    }
+    button {
+      background-color: #fca3b7;
+      border: none;
+      color: white;
+      padding: 0.8rem 1.5rem;
+      border-radius: 1rem;
+      cursor: pointer;
+      font-size: 1rem;
+      width: 100%;
+    }
+    .result {
+      text-align: center;
+      margin-top: 2rem;
+    }
+    .hidden {
+      display: none;
+    }
+    .loading {
+      display: none;
+      text-align: center;
+      font-size: 1.2rem;
+    }
+    @media screen and (max-width: 600px) {
+      body {
+        padding: 1rem;
+      }
+      h1 {
+        font-size: 1.5rem;
+      }
+      .container {
+        padding: 1rem;
+      }
+    }
+  </style>
+  <script src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>당신의 전생 직업은?</h1>
+    <form id="quiz-form">
+      <div id="quiz-container"></div>
+      <button type="submit">결과 보기</button>
+    </form>
+    <div class="loading" id="loading">🔮 전생을 조회 중입니다...</div>
+    <div id="result" class="result hidden"></div>
+    <div id="share-buttons" class="hidden" style="text-align:center; margin-top:1rem;">
+      <button onclick="shareKakao()">카카오톡 공유</button>
+    </div>
+  </div>
+
+  <script>
+    const questions = [
+      "아침에 눈 떴을 때 드는 첫 생각은?",
+      "회식 자리에서 당신의 모습은?",
+      "회사에서 스트레스받을 때 해결책은?",
+      "이상형을 고르자면?",
+      "어릴 적 가장 하고 싶었던 직업은?",
+      "사람들이 당신에게 자주 하는 말은?",
+      "주말에 하고 싶은 활동은?",
+      "나에게 ‘일’이란?",
+      "연애할 때 나는?",
+      "전생에서 가져올 수 있다면?"
+    ];
+
+    const choices = [
+      ["현실 도피!", "계획 세우기", "재밌는 일 찾기", "명상과 감정정리"],
+      ["눈치껏 웃는다", "MC를 맡는다", "센스있는 멘트", "사람들 챙긴다"],
+      ["혼자만의 시간 갖기", "해결방안 찾기", "수다 떨기", "산책/명상"],
+      ["신비롭고 이해할 수 없는 사람", "똑똑한 사람", "끼 넘치는 사람", "다정한 사람"],
+      ["마법사, 히어로", "판사, 과학자", "배우, 아이돌", "간호사, 선생님"],
+      ["넌 비밀이 많아 보여", "진짜 철두철미해", "재밌어", "따뜻해"],
+      ["방콕 상상력 풀가동", "계획 짠 여행", "즉흥 번개", "반려동물과 산책"],
+      ["삶을 유지하는 수단", "내가 성장하는 장", "표현하는 무대", "돕기 위한 도구"],
+      ["감정 표현이 서툼", "책임감 강한 편", "애정 표현 풍부", "한결같고 헌신적"],
+      ["초능력", "비밀 문서와 전략서", "화려한 외모", "힐링 능력"]
+    ];
+
+    const results = [
+      { title: "왕국의 책사", desc: "전략적이고 냉철한 판단력으로 모두를 이끌던 당신! 지금도 회의실에서 빛나는 중." },
+      { title: "신전의 무녀", desc: "사람들의 감정을 어루만지던 전생의 당신, 지금도 사람들의 고민을 자연스럽게 끌어안죠." },
+      { title: "도적단 리더", desc: "통제 불가 자유 영혼! 전생의 감각으로 회식도 업무도 완벽하게 스르륵 빠져나가요." },
+      { title: "궁정의 광대", desc: "웃음과 말솜씨로 궁정을 휘어잡았던 당신, 지금도 사람들 분위기를 좌지우지합니다!" },
+      { title: "은둔 철학자", desc: "모두가 시끄러워도 조용히 본질을 꿰뚫던 당신. 내면이 깊은 직장인 모드 ON." },
+      { title: "왕국의 기사단장", desc: "책임감으로 무장한 리더! 프로젝트를 끝까지 밀어붙이는 에너지, 전생 그대로입니다." },
+      { title: "숲의 치유사", desc: "다정하고 포근한 존재. 누구보다 따뜻한 눈빛으로 사람을 치유했던 존재입니다." },
+      { title: "마법사 견습생", desc: "조금 허당 같지만 창의력은 폭발! 지금도 새로운 아이디어로 마법 같은 결과를 만들죠." }
+    ];
+
+    const scores = new Array(results.length).fill(0);
+
+    const container = document.getElementById("quiz-container");
+
+    questions.forEach((q, i) => {
+      const div = document.createElement("div");
+      div.className = "question";
+      div.innerHTML = `<p><strong>Q${i+1}. ${q}</strong></p>`;
+      const options = choices[i].map((choice, j) => `
+        <label><input type="radio" name="q${i}" value="${j}" required> ${choice}</label>
+      `).join("");
+      div.innerHTML += `<div class="answers">${options}</div>`;
+      container.appendChild(div);
+    });
+
+    document.getElementById("quiz-form").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const form = new FormData(e.target);
+      scores.fill(0);
+      document.getElementById("loading").style.display = "block";
+      document.getElementById("result").classList.add("hidden");
+      document.getElementById("share-buttons").classList.add("hidden");
+
+      setTimeout(() => {
+        for (let i = 0; i < questions.length; i++) {
+          const answer = form.get(`q${i}`);
+          if (answer !== null) {
+            const index = parseInt(answer);
+            scores[index % scores.length] += 1;
+          }
+        }
+
+        const maxScore = Math.max(...scores);
+        const jobIndex = scores.indexOf(maxScore);
+        const resultData = results[jobIndex];
+
+        const resultEl = document.getElementById("result");
+        resultEl.classList.remove("hidden");
+        resultEl.innerHTML = `
+          <h2>✨ 당신의 전생 직업은 ✨<br><span style="font-size:1.5rem; color:#f67280">${resultData.title}</span></h2>
+          <p style="margin-top:1rem; font-size:1rem;">${resultData.desc}</p>
+          <img src="https://source.unsplash.com/200x200/?fantasy,${jobIndex}" alt="전생 직업" style="margin-top:1rem; border-radius:1rem;">
+        `;
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("share-buttons").classList.remove("hidden");
+      }, 1500);
+    });
+
+    function shareKakao() {
+      Kakao.init("YOUR_APP_KEY"); // 여기에 카카오 앱 키 삽입
+      Kakao.Link.sendDefault({
+        objectType: 'feed',
+        content: {
+          title: '당신의 전생 직업은?',
+          description: document.getElementById("result").innerText,
+          imageUrl: 'https://source.unsplash.com/200x200/?fantasy',
+          link: {
+            mobileWebUrl: window.location.href,
+            webUrl: window.location.href,
+          },
+        },
+        buttons: [
+          {
+            title: '나도 해보기',
+            link: {
+              mobileWebUrl: window.location.href,
+              webUrl: window.location.href,
+            },
+          },
+        ]
+      });
+    }
+  </script>
+</body>
+</html>
